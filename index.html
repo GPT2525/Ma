@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>Serial Realtime Scanner</title>
+<style>
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto;background:#020617;color:#e5e7eb}
+  .gate{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#020617;z-index:9999}
+  .gate-box{background:#0f172a;border:1px solid rgba(148,163,184,.3);border-radius:18px;padding:24px;width:90%;max-width:360px;text-align:center}
+  .gate-box h1{margin:0 0 8px;font-size:22px}
+  .gate-box p{margin:0 0 14px;font-size:13px;color:#94a3b8}
+  .gate-box input{width:100%;font-size:28px;text-align:center;letter-spacing:.4em;padding:12px;border-radius:14px;border:1px solid rgba(148,163,184,.4);background:#020617;color:#e5e7eb}
+  .wrap{padding:14px}
+  video{width:100%;height:auto;border-radius:14px;background:#000}
+  .roi{position:absolute;left:10%;top:42%;width:80%;height:18%;border:2px solid #60a5fa;border-radius:12px}
+  .status{margin-top:10px;font-size:14px}
+</style>
+</head>
+<body>
+
+<!-- PIN GATE -->
+<div id="pinGate" class="gate">
+  <div class="gate-box">
+    <h1>PIN CODE</h1>
+    <p>4桁入力で自動アンロック</p>
+    <input id="pinInput" inputmode="numeric" maxlength="4" placeholder="••••">
+    <div id="pinMsg" style="height:18px;color:#fb7185;font-size:12px;margin-top:8px"></div>
+  </div>
+</div>
+
+<div class="wrap">
+  <video id="video" playsinline muted></video>
+  <div class="roi"></div>
+  <div class="status" id="status">PIN解除後、カメラが起動します</div>
+</div>
+
+<script>
+/* ===== PIN ===== */
+const FIXED_PIN = "8888";
+const PIN_KEY = "serial_pin_ok";
+const pinGate = document.getElementById("pinGate");
+const pinInput = document.getElementById("pinInput");
+const pinMsg = document.getElementById("pinMsg");
+
+function unlock(){
+  localStorage.setItem(PIN_KEY,"1");
+  pinGate.style.display="none";
+  startCamera();
+}
+
+if(localStorage.getItem(PIN_KEY)==="1"){
+  pinGate.style.display="none";
+  setTimeout(startCamera,300);
+}
+
+pinInput.addEventListener("input",()=>{
+  const v = pinInput.value.replace(/\D/g,"").slice(0,4);
+  pinInput.value = v;
+  if(v.length===4){
+    if(v===FIXED_PIN){
+      unlock();
+    }else{
+      pinMsg.textContent="PINが違います";
+      pinInput.value="";
+    }
+  }
+});
+
+/* ===== CAMERA ===== */
+const video = document.getElementById("video");
+const status = document.getElementById("status");
+let stream = null;
+
+async function startCamera(){
+  if(stream) return;
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:"environment"},
+      audio:false
+    });
+    video.srcObject = stream;
+    await video.play();
+    status.textContent="カメラ起動中（Serial位置を枠に合わせてください）";
+  }catch(e){
+    status.textContent="カメラ起動失敗（SafariでHTTPSアクセスしてください）";
+  }
+}
+</script>
+
+</body>
+</html>
