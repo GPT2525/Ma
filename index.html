@@ -2,123 +2,413 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Serial Keeper</title>
-
 <style>
-body{
-  margin:0;
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
-  background:#fff;
-  color:#111;
-}
-header{
-  padding:16px;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  border-bottom:1px solid #eee;
-}
-.badge{
-  padding:6px 12px;
-  border-radius:999px;
-  border:1px solid #ddd;
-  font-size:14px;
-}
-main{
-  padding:16px;
-}
-input{
-  width:100%;
-  padding:14px;
-  font-size:18px;
-  border-radius:12px;
-  border:1px solid #ddd;
-}
-.note{
-  font-size:12px;
-  color:#666;
-  margin-top:6px;
-}
-#camera{
-  margin-top:20px;
-  border-radius:16px;
-  overflow:hidden;
-}
-video{
-  width:100%;
-}
-.frame{
-  position:absolute;
-  inset:30% 10%;
-  border:3px solid #3b82f6;
-  border-radius:14px;
-}
-.status{
-  margin-top:10px;
-  font-size:14px;
-  color:#555;
-}
+  :root{
+    --fg:#111; --muted:#666; --line:#e9e9e9; --chip:#f7f7f7;
+    --ok:#0a7a2f; --ng:#b42318;
+  }
+  body{
+    margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial;
+    background:#fff; color:var(--fg);
+  }
+  header{
+    position:sticky; top:0; z-index:10;
+    background:#fff;
+    padding:14px 16px;
+    display:flex; align-items:center; justify-content:space-between;
+    border-bottom:1px solid var(--line);
+  }
+  h1{ margin:0; font-size:18px; font-weight:700; letter-spacing:.2px;}
+  .chips{ display:flex; gap:8px; align-items:center;}
+  .chip{
+    font-size:13px; padding:7px 10px; border-radius:999px;
+    border:1px solid var(--line); background:var(--chip); color:var(--fg);
+    white-space:nowrap;
+  }
+  main{ padding:16px; max-width:720px; margin:0 auto;}
+  .card{
+    border:1px solid var(--line); border-radius:16px; overflow:hidden;
+    background:#fff;
+  }
+  .pad{ padding:14px; }
+  label{ display:block; font-size:12px; color:var(--muted); margin-bottom:8px; }
+  input{
+    width:100%; box-sizing:border-box;
+    padding:14px 14px; font-size:18px; border-radius:14px;
+    border:1px solid var(--line); outline:none;
+    background:#fff;
+  }
+  input:focus{ border-color:#c9c9c9; }
+  .note{ margin-top:8px; font-size:12px; color:var(--muted); }
+  .row{ display:flex; gap:10px; flex-wrap:wrap; }
+  button{
+    border:1px solid var(--line); background:#fff; color:var(--fg);
+    padding:12px 14px; border-radius:14px; font-size:14px;
+    cursor:pointer;
+  }
+  button.primary{
+    background:#111; color:#fff; border-color:#111;
+  }
+  button:active{ transform:translateY(1px); }
+  .cameraWrap{
+    margin-top:12px;
+    border-radius:16px;
+    overflow:hidden;
+    border:1px solid var(--line);
+    position:relative;
+    background:#000;
+  }
+  video{ width:100%; height:auto; display:block; }
+  .frame{
+    position:absolute;
+    left:9%; top:58%;
+    width:82%; height:26%;
+    border:2px solid rgba(59,130,246,.95);
+    border-radius:16px;
+    box-shadow:0 0 0 9999px rgba(0,0,0,.35) inset;
+    pointer-events:none;
+  }
+  .overlayText{
+    position:absolute; left:0; right:0; bottom:10px;
+    text-align:center; font-size:12px; color:#fff; opacity:.9;
+    text-shadow:0 1px 2px rgba(0,0,0,.6);
+    padding:0 10px;
+  }
+  .status{
+    margin-top:10px; font-size:13px; color:var(--muted);
+  }
+  .status b{ color:var(--fg); }
+  .ok{ color:var(--ok); font-weight:700; }
+  .ng{ color:var(--ng); font-weight:700; }
+
+  .list{
+    margin-top:14px;
+    border:1px solid var(--line);
+    border-radius:16px; overflow:hidden;
+  }
+  .listHead{
+    padding:10px 12px;
+    background:#fafafa;
+    border-bottom:1px solid var(--line);
+    display:flex; justify-content:space-between; align-items:center;
+    font-size:12px; color:var(--muted);
+  }
+  table{
+    width:100%; border-collapse:collapse; font-size:13px;
+  }
+  td,th{ padding:10px 12px; border-bottom:1px solid var(--line); text-align:left; }
+  tr:last-child td{ border-bottom:none; }
+  .mono{ font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace; letter-spacing:.2px;}
 </style>
 </head>
 
 <body>
-
 <header>
-  <h2>Serial Keeper</h2>
-  <div class="badge" id="inquiryBadge">Inquiry No.: —</div>
+  <h1>Serial Keeper</h1>
+  <div class="chips">
+    <div class="chip" id="inquiryChip">Inquiry No.: —</div>
+    <div class="chip" id="savedChip">Saved: 0</div>
+  </div>
 </header>
 
 <main>
-  <input id="inquiryInput" inputmode="numeric" placeholder="12345-1234567">
-  <div class="note">数字5桁 + - + 数字7桁（自動確定）</div>
+  <div class="card">
+    <div class="pad">
+      <label>問い合わせ番号（数字5桁-数字7桁 / 自動確定）</label>
+      <input id="inquiryInput" inputmode="numeric" autocomplete="off" placeholder="12345-1234567">
+      <div class="note">※ 形式が合った時だけ保存できます（Enter不要）</div>
 
-  <div id="camera">
-    <video id="video" autoplay playsinline></video>
-    <div class="frame"></div>
+      <div class="row" style="margin-top:12px;">
+        <button class="primary" id="btnStart">カメラ開始</button>
+        <button id="btnExport">CSV出力</button>
+        <button id="btnClear">全削除</button>
+      </div>
+
+      <div class="cameraWrap" id="cameraWrap" style="display:none;">
+        <video id="video" playsinline autoplay muted></video>
+        <div class="frame"></div>
+        <div class="overlayText">枠に (S) Serial No. のバーコード付近を合わせてください（自動保存）</div>
+      </div>
+
+      <div class="status" id="status">
+        <b>待機中</b>：まず問い合わせ番号を入力 → カメラ開始
+      </div>
+      <div class="status mono" id="lastRaw" style="display:none;"></div>
+    </div>
   </div>
 
-  <div class="status" id="status">
-    問い合わせ番号が確定すると読み取り開始
+  <div class="list" style="margin-top:14px;">
+    <div class="listHead">
+      <div>保存履歴（最新100件）</div>
+      <div class="mono" id="dupInfo"></div>
+    </div>
+    <div style="max-height:360px; overflow:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:34%;">Inquiry</th>
+            <th style="width:30%;">Serial</th>
+            <th>Time</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
   </div>
 </main>
 
 <script>
+/** ===== 設定 ===== */
+const SERIAL_RE = /^(?=.*[A-Z])[A-Z0-9]{10}$/; // 英大文字+数字のみ / 10桁固定 / 英字1つ以上
+const INQUIRY_RE = /^\d{5}-\d{7}$/;            // 数字5-7
+const LS_KEY = "serial_keeper_vB_records";
+
+/** ===== 状態 ===== */
 let inquiryNo = "";
-const input = document.getElementById("inquiryInput");
-const badge = document.getElementById("inquiryBadge");
-const status = document.getElementById("status");
+let records = loadRecords();
+let lastAccepted = { serial:"", at:0 }; // 連続同一の抑制
+let cameraStream = null;
+let detector = null;
+let scanning = false;
 
-// 入力監視（Enter不要）
-input.addEventListener("input", () => {
-  let v = input.value.replace(/[^\d]/g, "");
+/** ===== DOM ===== */
+const inquiryInput = document.getElementById("inquiryInput");
+const inquiryChip  = document.getElementById("inquiryChip");
+const savedChip    = document.getElementById("savedChip");
+const btnStart     = document.getElementById("btnStart");
+const btnExport    = document.getElementById("btnExport");
+const btnClear     = document.getElementById("btnClear");
+const statusEl     = document.getElementById("status");
+const lastRawEl    = document.getElementById("lastRaw");
+const cameraWrap   = document.getElementById("cameraWrap");
+const video        = document.getElementById("video");
+const tbody        = document.getElementById("tbody");
+const dupInfo      = document.getElementById("dupInfo");
 
-  if (v.length > 12) v = v.slice(0,12);
+/** ===== 問い合わせ番号：Enter不要 自動確定 ===== */
+inquiryInput.addEventListener("input", () => {
+  // 数字だけ取り出し → 5桁超えたらハイフン挿入
+  let digits = inquiryInput.value.replace(/[^\d]/g, "");
+  if (digits.length > 12) digits = digits.slice(0,12);
+  let v = digits;
+  if (digits.length > 5) v = digits.slice(0,5) + "-" + digits.slice(5);
+  inquiryInput.value = v;
 
-  if (v.length > 5) {
-    v = v.slice(0,5) + "-" + v.slice(5);
-  }
-
-  input.value = v;
-
-  // 完全一致チェック
-  if (/^\d{5}-\d{7}$/.test(v)) {
+  if (INQUIRY_RE.test(v)) {
     inquiryNo = v;
-    badge.textContent = `Inquiry No.: ${v}`;
-    status.textContent = "読み取り待機中（自動保存）";
+    inquiryChip.textContent = `Inquiry No.: ${v}`;
+    setStatus("読み取り待機中：カメラ開始してください", "ok");
   } else {
     inquiryNo = "";
-    badge.textContent = "Inquiry No.: —";
-    status.textContent = "問い合わせ番号が未確定です";
+    inquiryChip.textContent = "Inquiry No.: —";
+    setStatus("問い合わせ番号が未確定です（12345-1234567）", "ng");
   }
 });
 
-// カメラ起動
-navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
-.then(stream=>{
-  document.getElementById("video").srcObject = stream;
-});
-</script>
+/** ===== UI更新 ===== */
+function setStatus(text, tone){
+  statusEl.innerHTML = `<b class="${tone==='ok'?'ok':tone==='ng'?'ng':''}">${text}</b>`;
+}
+function refreshTable(){
+  const show = records.slice(-100).reverse();
+  tbody.innerHTML = show.map(r => `
+    <tr>
+      <td class="mono">${escapeHtml(r.inquiry)}</td>
+      <td class="mono">${escapeHtml(r.serial)}</td>
+      <td>${new Date(r.at).toLocaleString()}</td>
+    </tr>
+  `).join("");
+  savedChip.textContent = `Saved: ${records.length}`;
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
 
+/** ===== 保存ロジック ===== */
+function normalizeRaw(raw){
+  if (!raw) return "";
+  // 余計な空白/改行/制御を削除 → 大文字化 → 英数以外除去
+  const upper = String(raw).toUpperCase().trim();
+  const cleaned = upper.replace(/[^A-Z0-9]/g, "");
+  return cleaned;
+}
+
+function tryAccept(rawValue){
+  // 生値表示（デバッグ用：必要なければ消してOK）
+  lastRawEl.style.display = "block";
+  lastRawEl.textContent = `RAW: ${rawValue}`;
+
+  if (!inquiryNo) return;               // 問い合わせ未確定なら保存しない
+  if (!INQUIRY_RE.test(inquiryNo)) return;
+
+  const serial = normalizeRaw(rawValue);
+
+  // Serial条件に一致するものだけ保存
+  if (!SERIAL_RE.test(serial)) return;
+
+  // 連続同一（ブレで同じものを何回も拾う）を1.2秒抑制
+  const now = Date.now();
+  if (serial === lastAccepted.serial && (now - lastAccepted.at) < 1200) return;
+  lastAccepted = { serial, at: now };
+
+  // 既に保存済みなら保存しない（問い合わせが違っても重複は禁止）
+  const exists = records.some(r => r.serial === serial);
+  if (exists) {
+    dupInfo.textContent = `DUP: ${serial}`;
+    setTimeout(()=>{ dupInfo.textContent=""; }, 1200);
+    return;
+  }
+
+  records.push({ inquiry: inquiryNo, serial, at: now });
+  saveRecords(records);
+  refreshTable();
+
+  // 体感フィードバック（無音・軽く）
+  try { navigator.vibrate && navigator.vibrate(30); } catch(e){}
+}
+
+/** ===== BarcodeDetector ===== */
+function isBarcodeDetectorSupported(){
+  return ("BarcodeDetector" in window);
+}
+
+async function initDetector(){
+  if (!isBarcodeDetectorSupported()) return null;
+  // 端末により対応formatが違う。可能性の高いものを列挙
+  // ※ SerialバーコードがCODE_128想定。その他が混ざっても保存フィルタで落とす。
+  const formats = [
+    "code_128","ean_13","ean_8","upc_a","upc_e",
+    "qr_code","data_matrix","pdf417","code_39","itf"
+  ];
+  try{
+    // getSupportedFormats がある場合は交差を取る
+    if (BarcodeDetector.getSupportedFormats) {
+      const supported = await BarcodeDetector.getSupportedFormats();
+      const use = formats.filter(f => supported.includes(f));
+      return new BarcodeDetector({ formats: use.length ? use : undefined });
+    }
+    return new BarcodeDetector({ formats });
+  }catch(e){
+    return null;
+  }
+}
+
+async function startCamera(){
+  if (!inquiryNo || !INQUIRY_RE.test(inquiryNo)) {
+    setStatus("問い合わせ番号を先に確定してください（12345-1234567）", "ng");
+    return;
+  }
+
+  detector = await initDetector();
+  if (!detector) {
+    setStatus("このSafariはバーコード検出に非対応です。Tera等スキャナ方式が必要です。", "ng");
+    return;
+  }
+
+  try{
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment", width:{ideal:1280}, height:{ideal:720} },
+      audio: false
+    });
+    video.srcObject = cameraStream;
+    cameraWrap.style.display = "block";
+    setStatus("読み取り中：バーコードを枠に入れてください（Serialだけ自動保存）", "ok");
+    scanning = true;
+    scanLoop();
+  }catch(e){
+    setStatus("カメラ許可が必要です（Safariの権限をON）", "ng");
+  }
+}
+
+function stopCamera(){
+  scanning = false;
+  if (cameraStream){
+    cameraStream.getTracks().forEach(t => t.stop());
+    cameraStream = null;
+  }
+  cameraWrap.style.display = "none";
+}
+
+async function scanLoop(){
+  if (!scanning) return;
+  try{
+    if (video.readyState >= 2) {
+      const barcodes = await detector.detect(video);
+      // 複数検出されても全部試す（保存フィルタでSerialだけ残る）
+      for (const bc of barcodes) {
+        if (bc && bc.rawValue) tryAccept(bc.rawValue);
+      }
+    }
+  }catch(e){
+    // 検出失敗は無視して継続
+  }
+  requestAnimationFrame(scanLoop);
+}
+
+/** ===== CSV出力 ===== */
+function exportCSV(){
+  const header = ["Inquiry","Serial","ScannedAt"];
+  const rows = records.map(r => [
+    r.inquiry,
+    r.serial,
+    new Date(r.at).toISOString()
+  ]);
+  const csv = [header, ...rows].map(cols => cols.map(csvEscape).join(",")).join("\n");
+  const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const ymd = new Date().toISOString().slice(0,10).replaceAll("-","");
+  a.href = url;
+  a.download = `serial_${ymd}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+function csvEscape(v){
+  const s = String(v ?? "");
+  if (/[",\n]/.test(s)) return `"${s.replace(/"/g,'""')}"`;
+  return s;
+}
+
+/** ===== 永続化 ===== */
+function loadRecords(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  }catch(e){ return []; }
+}
+function saveRecords(arr){
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(arr)); }catch(e){}
+}
+
+/** ===== ボタン ===== */
+btnStart.addEventListener("click", async ()=>{
+  if (scanning) {
+    stopCamera();
+    btnStart.textContent = "カメラ開始";
+    setStatus("停止しました：再開する場合はカメラ開始", "ok");
+  } else {
+    await startCamera();
+    if (scanning) btnStart.textContent = "停止";
+  }
+});
+
+btnExport.addEventListener("click", exportCSV);
+
+btnClear.addEventListener("click", ()=>{
+  if (!confirm("保存データを全削除します。よろしいですか？")) return;
+  records = [];
+  saveRecords(records);
+  refreshTable();
+  setStatus("全削除しました", "ok");
+});
+
+/** 初期表示 */
+refreshTable();
+</script>
 </body>
 </html>
