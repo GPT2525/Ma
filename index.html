@@ -6,101 +6,79 @@
 <title>Serial Keeper</title>
 <style>
   :root{
-    --fg:#111; --muted:#666; --line:#e9e9e9; --chip:#f7f7f7;
-    --ok:#0a7a2f; --ng:#b42318;
+    --fg:#0b0b0b; --muted:#6b7280; --line:#e5e7eb; --bg:#ffffff; --chip:#f3f4f6;
+    --ok:#0a7a2f; --ng:#b42318; --blue:#2563eb; --shadow:0 12px 28px rgba(0,0,0,.08);
+    --radius:18px;
   }
-  body{
-    margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial;
-    background:#fff; color:var(--fg);
-  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial;background:var(--bg);color:var(--fg);}
   header{
-    position:sticky; top:0; z-index:10;
-    background:#fff;
-    padding:14px 16px;
-    display:flex; align-items:center; justify-content:space-between;
-    border-bottom:1px solid var(--line);
+    position:sticky;top:0;z-index:10;background:rgba(255,255,255,.92);backdrop-filter:saturate(180%) blur(10px);
+    border-bottom:1px solid var(--line); padding:14px 16px; display:flex; align-items:center; justify-content:space-between;
   }
-  h1{ margin:0; font-size:18px; font-weight:700; letter-spacing:.2px;}
-  .chips{ display:flex; gap:8px; align-items:center;}
+  h1{margin:0;font-size:18px;font-weight:800;letter-spacing:.2px;}
+  .chips{display:flex;gap:8px;align-items:center;}
   .chip{
-    font-size:13px; padding:7px 10px; border-radius:999px;
-    border:1px solid var(--line); background:var(--chip); color:var(--fg);
-    white-space:nowrap;
+    font-size:13px;padding:7px 10px;border-radius:999px;border:1px solid var(--line);
+    background:var(--chip);white-space:nowrap;
   }
-  main{ padding:16px; max-width:720px; margin:0 auto;}
-  .card{
-    border:1px solid var(--line); border-radius:16px; overflow:hidden;
-    background:#fff;
-  }
-  .pad{ padding:14px; }
-  label{ display:block; font-size:12px; color:var(--muted); margin-bottom:8px; }
+  main{padding:16px;max-width:760px;margin:0 auto;}
+  .card{border:1px solid var(--line);border-radius:var(--radius);background:#fff;box-shadow:var(--shadow);overflow:hidden;}
+  .pad{padding:16px;}
+  label{display:block;font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:700;}
   input{
-    width:100%; box-sizing:border-box;
-    padding:14px 14px; font-size:18px; border-radius:14px;
-    border:1px solid var(--line); outline:none;
-    background:#fff;
+    width:100%;padding:14px 14px;font-size:18px;border-radius:14px;border:1px solid var(--line);
+    outline:none;background:#fff; letter-spacing:.3px;
   }
-  input:focus{ border-color:#c9c9c9; }
-  .note{ margin-top:8px; font-size:12px; color:var(--muted); }
-  .row{ display:flex; gap:10px; flex-wrap:wrap; }
+  input:focus{border-color:rgba(37,99,235,.5); box-shadow:0 0 0 4px rgba(37,99,235,.12);}
+  .note{margin-top:8px;font-size:12px;color:var(--muted);line-height:1.5;}
+  .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;}
   button{
-    border:1px solid var(--line); background:#fff; color:var(--fg);
-    padding:12px 14px; border-radius:14px; font-size:14px;
-    cursor:pointer;
+    border:1px solid var(--line);background:#fff;color:var(--fg);padding:12px 14px;border-radius:14px;font-size:14px;
+    cursor:pointer; font-weight:700;
   }
-  button.primary{
-    background:#111; color:#fff; border-color:#111;
-  }
-  button:active{ transform:translateY(1px); }
-  .cameraWrap{
-    margin-top:12px;
-    border-radius:16px;
-    overflow:hidden;
-    border:1px solid var(--line);
-    position:relative;
-    background:#000;
-  }
-  video{ width:100%; height:auto; display:block; }
+  button:active{transform:translateY(1px);}
+  button.primary{background:#0b0b0b;color:#fff;border-color:#0b0b0b;}
+  button.primary:disabled{opacity:.6;cursor:not-allowed;}
+  .status{margin-top:10px;font-size:13px;color:var(--muted);line-height:1.45;}
+  .status b{color:var(--fg);}
+  .ok{color:var(--ok);font-weight:900;}
+  .ng{color:var(--ng);font-weight:900;}
+
+  .cameraWrap{margin-top:14px;border-radius:var(--radius);overflow:hidden;border:1px solid var(--line);background:#000;position:relative;}
+  #cameraBox{position:relative;width:100%;aspect-ratio: 3 / 4; background:#000;}
+  video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+
+  /* “ラベル全体OK”用の大きめ枠 */
   .frame{
-    position:absolute;
-    left:9%; top:58%;
-    width:82%; height:26%;
-    border:2px solid rgba(59,130,246,.95);
-    border-radius:16px;
-    box-shadow:0 0 0 9999px rgba(0,0,0,.35) inset;
-    pointer-events:none;
+    position:absolute;left:6%;top:40%;width:88%;height:52%;
+    border:2px solid rgba(37,99,235,.95);border-radius:16px;
+    box-shadow:0 0 0 9999px rgba(0,0,0,.32) inset;pointer-events:none;
   }
   .overlayText{
-    position:absolute; left:0; right:0; bottom:10px;
-    text-align:center; font-size:12px; color:#fff; opacity:.9;
-    text-shadow:0 1px 2px rgba(0,0,0,.6);
-    padding:0 10px;
+    position:absolute;left:0;right:0;bottom:10px;text-align:center;font-size:12px;color:#fff;opacity:.92;
+    text-shadow:0 1px 2px rgba(0,0,0,.65);padding:0 12px;line-height:1.35;
   }
-  .status{
-    margin-top:10px; font-size:13px; color:var(--muted);
-  }
-  .status b{ color:var(--fg); }
-  .ok{ color:var(--ok); font-weight:700; }
-  .ng{ color:var(--ng); font-weight:700; }
 
-  .list{
-    margin-top:14px;
-    border:1px solid var(--line);
-    border-radius:16px; overflow:hidden;
+  .toast{
+    position:fixed;left:50%;transform:translateX(-50%);
+    bottom:18px;z-index:9999;
+    background:rgba(17,17,17,.92);color:#fff;
+    padding:10px 12px;border-radius:999px;font-size:13px;
+    max-width:92vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    display:none;
   }
+
+  .list{margin-top:14px;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:#fff;}
   .listHead{
-    padding:10px 12px;
-    background:#fafafa;
-    border-bottom:1px solid var(--line);
-    display:flex; justify-content:space-between; align-items:center;
-    font-size:12px; color:var(--muted);
+    padding:10px 12px;background:#fafafa;border-bottom:1px solid var(--line);
+    display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);
   }
-  table{
-    width:100%; border-collapse:collapse; font-size:13px;
-  }
-  td,th{ padding:10px 12px; border-bottom:1px solid var(--line); text-align:left; }
-  tr:last-child td{ border-bottom:none; }
-  .mono{ font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace; letter-spacing:.2px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  td,th{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;}
+  tr:last-child td{border-bottom:none;}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;letter-spacing:.3px;}
+  .right{ text-align:right; }
 </style>
 </head>
 
@@ -118,62 +96,70 @@
     <div class="pad">
       <label>問い合わせ番号（数字5桁-数字7桁 / 自動確定）</label>
       <input id="inquiryInput" inputmode="numeric" autocomplete="off" placeholder="12345-1234567">
-      <div class="note">※ 形式が合った時だけ保存できます（Enter不要）</div>
+      <div class="note">
+        ✅ ラベル全体を枠に入れてOK（バーコードが複数あってもOK）<br>
+        ✅ 保存されるのは <b>英字入り10桁（A–Z/0–9、英字は大文字）だけ</b><br>
+        ※ 形式が合った時だけ保存できます（Enter不要）
+      </div>
 
-      <div class="row" style="margin-top:12px;">
+      <div class="row">
         <button class="primary" id="btnStart">カメラ開始</button>
         <button id="btnExport">CSV出力</button>
         <button id="btnClear">全削除</button>
       </div>
 
       <div class="cameraWrap" id="cameraWrap" style="display:none;">
-        <video id="video" playsinline autoplay muted></video>
-        <div class="frame"></div>
-        <div class="overlayText">枠に (S) Serial No. のバーコード付近を合わせてください（自動保存）</div>
+        <div id="cameraBox">
+          <video id="video" playsinline autoplay muted></video>
+          <div class="frame"></div>
+          <div class="overlayText">
+            ラベル全体を枠に入れてください（保存：英字入り10桁のみ / 自動保存）
+          </div>
+        </div>
       </div>
 
-      <div class="status" id="status">
-        <b>待機中</b>：まず問い合わせ番号を入力 → カメラ開始
+      <div class="status" id="status"><b>待機中</b>：問い合わせ番号を入力 → 自動確定 → カメラ開始</div>
+      <div class="note">
+        読めない時：①明るくする ②反射を避ける（角度を少し変える）③10〜25cm離す ④手ブレ停止
       </div>
-      <div class="status mono" id="lastRaw" style="display:none;"></div>
     </div>
   </div>
 
-  <div class="list" style="margin-top:14px;">
+  <div class="list">
     <div class="listHead">
       <div>保存履歴（最新100件）</div>
       <div class="mono" id="dupInfo"></div>
     </div>
     <div style="max-height:360px; overflow:auto;">
       <table>
-        <thead>
-          <tr>
-            <th style="width:34%;">Inquiry</th>
-            <th style="width:30%;">Serial</th>
-            <th>Time</th>
-          </tr>
-        </thead>
+        <thead><tr><th style="width:34%;">Inquiry</th><th style="width:34%;">Serial</th><th>Time</th></tr></thead>
         <tbody id="tbody"></tbody>
       </table>
     </div>
   </div>
 </main>
 
-<script>
-/** ===== 設定 ===== */
-const SERIAL_RE = /^(?=.*[A-Z])[A-Z0-9]{10}$/; // 英大文字+数字のみ / 10桁固定 / 英字1つ以上
-const INQUIRY_RE = /^\d{5}-\d{7}$/;            // 数字5-7
-const LS_KEY = "serial_keeper_vB_records";
+<div class="toast" id="toast"></div>
 
-/** ===== 状態 ===== */
+<!-- Quagga2 -->
+<script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.2.6/dist/quagga.min.js"></script>
+
+<script>
+/** 仕様（ここ超重要）
+ *  - シリアル: 英大文字+数字のみ / 英字必須 / 10桁固定
+ *  - 問い合わせ番号: 5桁-7桁（数字のみ）
+ */
+const SERIAL_RE  = /^(?=.*[A-Z])[A-Z0-9]{10}$/;
+const INQUIRY_RE = /^\d{5}-\d{7}$/;
+const LS_KEY = "serial_keeper_quagga_records_v2";
+
+/** state */
 let inquiryNo = "";
 let records = loadRecords();
-let lastAccepted = { serial:"", at:0 }; // 連続同一の抑制
-let cameraStream = null;
-let detector = null;
-let scanning = false;
+let running = false;
+let lastAccepted = { serial:"", at:0 };
 
-/** ===== DOM ===== */
+/** DOM */
 const inquiryInput = document.getElementById("inquiryInput");
 const inquiryChip  = document.getElementById("inquiryChip");
 const savedChip    = document.getElementById("savedChip");
@@ -181,33 +167,19 @@ const btnStart     = document.getElementById("btnStart");
 const btnExport    = document.getElementById("btnExport");
 const btnClear     = document.getElementById("btnClear");
 const statusEl     = document.getElementById("status");
-const lastRawEl    = document.getElementById("lastRaw");
 const cameraWrap   = document.getElementById("cameraWrap");
-const video        = document.getElementById("video");
 const tbody        = document.getElementById("tbody");
 const dupInfo      = document.getElementById("dupInfo");
+const toastEl      = document.getElementById("toast");
 
-/** ===== 問い合わせ番号：Enter不要 自動確定 ===== */
-inquiryInput.addEventListener("input", () => {
-  // 数字だけ取り出し → 5桁超えたらハイフン挿入
-  let digits = inquiryInput.value.replace(/[^\d]/g, "");
-  if (digits.length > 12) digits = digits.slice(0,12);
-  let v = digits;
-  if (digits.length > 5) v = digits.slice(0,5) + "-" + digits.slice(5);
-  inquiryInput.value = v;
-
-  if (INQUIRY_RE.test(v)) {
-    inquiryNo = v;
-    inquiryChip.textContent = `Inquiry No.: ${v}`;
-    setStatus("読み取り待機中：カメラ開始してください", "ok");
-  } else {
-    inquiryNo = "";
-    inquiryChip.textContent = "Inquiry No.: —";
-    setStatus("問い合わせ番号が未確定です（12345-1234567）", "ng");
-  }
-});
-
-/** ===== UI更新 ===== */
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+function toast(msg, ok=true){
+  toastEl.textContent = msg;
+  toastEl.style.display = "block";
+  toastEl.style.background = ok ? "rgba(10,122,47,.92)" : "rgba(180,35,24,.92)";
+  clearTimeout(toastEl._t);
+  toastEl._t = setTimeout(()=>toastEl.style.display="none", 1100);
+}
 function setStatus(text, tone){
   statusEl.innerHTML = `<b class="${tone==='ok'?'ok':tone==='ng'?'ng':''}">${text}</b>`;
 }
@@ -215,200 +187,189 @@ function refreshTable(){
   const show = records.slice(-100).reverse();
   tbody.innerHTML = show.map(r => `
     <tr>
-      <td class="mono">${escapeHtml(r.inquiry)}</td>
-      <td class="mono">${escapeHtml(r.serial)}</td>
+      <td class="mono">${esc(r.inquiry)}</td>
+      <td class="mono">${esc(r.serial)}</td>
       <td>${new Date(r.at).toLocaleString()}</td>
-    </tr>
-  `).join("");
+    </tr>`).join("");
   savedChip.textContent = `Saved: ${records.length}`;
 }
-function escapeHtml(s){
-  return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-}
 
-/** ===== 保存ロジック ===== */
+/** normalizers */
 function normalizeRaw(raw){
-  if (!raw) return "";
-  // 余計な空白/改行/制御を削除 → 大文字化 → 英数以外除去
-  const upper = String(raw).toUpperCase().trim();
-  const cleaned = upper.replace(/[^A-Z0-9]/g, "");
-  return cleaned;
+  if(!raw) return "";
+  return String(raw).toUpperCase().trim().replace(/[^A-Z0-9]/g,"");
 }
 
+/** accept rule:
+ *  - Quaggaが読んだ結果は全部受け取る
+ *  - ただし保存するのは SERIAL_RE に一致するものだけ
+ *  - 重複は弾く（全Inquiry共通で一意）
+ */
 function tryAccept(rawValue){
-  // 生値表示（デバッグ用：必要なければ消してOK）
-  lastRawEl.style.display = "block";
-  lastRawEl.textContent = `RAW: ${rawValue}`;
-
-  if (!inquiryNo) return;               // 問い合わせ未確定なら保存しない
-  if (!INQUIRY_RE.test(inquiryNo)) return;
-
+  if(!INQUIRY_RE.test(inquiryNo)) return;
   const serial = normalizeRaw(rawValue);
 
-  // Serial条件に一致するものだけ保存
-  if (!SERIAL_RE.test(serial)) return;
+  // ここで“シリアル以外”を全部捨てる
+  if(!SERIAL_RE.test(serial)){
+    // 読めてるけど捨てた（見える化）
+    // 例: 数字だけのJAN/IMEI/EIDが来ても無視
+    toast(`SKIP: ${serial || "(empty)"}`, false);
+    return;
+  }
 
-  // 連続同一（ブレで同じものを何回も拾う）を1.2秒抑制
   const now = Date.now();
+
+  // 連続同一の誤爆を抑制
   if (serial === lastAccepted.serial && (now - lastAccepted.at) < 1200) return;
   lastAccepted = { serial, at: now };
 
-  // 既に保存済みなら保存しない（問い合わせが違っても重複は禁止）
-  const exists = records.some(r => r.serial === serial);
-  if (exists) {
+  // 全体で重複排除
+  if (records.some(r => r.serial === serial)){
     dupInfo.textContent = `DUP: ${serial}`;
-    setTimeout(()=>{ dupInfo.textContent=""; }, 1200);
+    toast(`DUP: ${serial}`, false);
+    setTimeout(()=>dupInfo.textContent="", 1200);
     return;
   }
 
   records.push({ inquiry: inquiryNo, serial, at: now });
   saveRecords(records);
   refreshTable();
-
-  // 体感フィードバック（無音・軽く）
-  try { navigator.vibrate && navigator.vibrate(30); } catch(e){}
+  toast(`SAVED: ${serial}`, true);
+  try{ navigator.vibrate && navigator.vibrate(25);}catch(e){}
 }
 
-/** ===== BarcodeDetector ===== */
-function isBarcodeDetectorSupported(){
-  return ("BarcodeDetector" in window);
-}
+/** Inquiry input: Enter不要で自動確定（5-7） */
+inquiryInput.addEventListener("input", () => {
+  let digits = inquiryInput.value.replace(/[^\d]/g,"");
+  if(digits.length > 12) digits = digits.slice(0,12);
+  let v = digits.length > 5 ? (digits.slice(0,5) + "-" + digits.slice(5)) : digits;
+  inquiryInput.value = v;
 
-async function initDetector(){
-  if (!isBarcodeDetectorSupported()) return null;
-  // 端末により対応formatが違う。可能性の高いものを列挙
-  // ※ SerialバーコードがCODE_128想定。その他が混ざっても保存フィルタで落とす。
-  const formats = [
-    "code_128","ean_13","ean_8","upc_a","upc_e",
-    "qr_code","data_matrix","pdf417","code_39","itf"
-  ];
-  try{
-    // getSupportedFormats がある場合は交差を取る
-    if (BarcodeDetector.getSupportedFormats) {
-      const supported = await BarcodeDetector.getSupportedFormats();
-      const use = formats.filter(f => supported.includes(f));
-      return new BarcodeDetector({ formats: use.length ? use : undefined });
-    }
-    return new BarcodeDetector({ formats });
-  }catch(e){
-    return null;
+  if(INQUIRY_RE.test(v)){
+    inquiryNo = v;
+    inquiryChip.textContent = `Inquiry No.: ${v}`;
+    setStatus("読み取り待機：カメラ開始してください（ラベル全体OK）", "ok");
+  }else{
+    inquiryNo = "";
+    inquiryChip.textContent = "Inquiry No.: —";
+    setStatus("問い合わせ番号を入力（12345-1234567）", "ng");
   }
-}
+});
 
-async function startCamera(){
-  if (!inquiryNo || !INQUIRY_RE.test(inquiryNo)) {
+/** Quagga start/stop
+ *  - Code128のみ読む（Serialバーコード想定）
+ *  - エリアは大きめ：Serialだけ枠に入れなくてOK
+ */
+function start(){
+  if(!INQUIRY_RE.test(inquiryNo)){
     setStatus("問い合わせ番号を先に確定してください（12345-1234567）", "ng");
-    return;
+    return Promise.reject(new Error("Inquiry not set"));
   }
+  cameraWrap.style.display = "block";
+  setStatus("読み取り中：ラベル全体OK（保存：英字入り10桁のみ）", "ok");
 
-  detector = await initDetector();
-  if (!detector) {
-    setStatus("このSafariはバーコード検出に非対応です。Tera等スキャナ方式が必要です。", "ng");
-    return;
-  }
-
-  try{
-    cameraStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "environment", width:{ideal:1280}, height:{ideal:720} },
-      audio: false
+  return new Promise((resolve, reject)=>{
+    Quagga.init({
+      inputStream: {
+        name: "Live",
+        type: "LiveStream",
+        target: document.querySelector("#cameraBox"),
+        constraints: {
+          facingMode: "environment",
+          width:  { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        // ラベル領域を広く（Serialだけ枠に入れ不要）
+        area: { top: "40%", right: "6%", left: "6%", bottom: "8%" }
+      },
+      decoder: {
+        readers: ["code_128_reader"],
+        multiple: true
+      },
+      locate: true,
+      // iOS Safariは0が安定しやすい
+      numOfWorkers: 0
+    }, (err)=>{
+      if(err){
+        cameraWrap.style.display = "none";
+        reject(err);
+        return;
+      }
+      Quagga.start();
+      running = true;
+      resolve();
     });
-    video.srcObject = cameraStream;
-    cameraWrap.style.display = "block";
-    setStatus("読み取り中：バーコードを枠に入れてください（Serialだけ自動保存）", "ok");
-    scanning = true;
-    scanLoop();
-  }catch(e){
-    setStatus("カメラ許可が必要です（Safariの権限をON）", "ng");
-  }
+  });
 }
 
-function stopCamera(){
-  scanning = false;
-  if (cameraStream){
-    cameraStream.getTracks().forEach(t => t.stop());
-    cameraStream = null;
-  }
+function stop(){
+  try{ Quagga.stop(); }catch(e){}
+  running = false;
   cameraWrap.style.display = "none";
 }
 
-async function scanLoop(){
-  if (!scanning) return;
+/** detect handler */
+Quagga.onDetected((data)=>{
   try{
-    if (video.readyState >= 2) {
-      const barcodes = await detector.detect(video);
-      // 複数検出されても全部試す（保存フィルタでSerialだけ残る）
-      for (const bc of barcodes) {
-        if (bc && bc.rawValue) tryAccept(bc.rawValue);
-      }
-    }
-  }catch(e){
-    // 検出失敗は無視して継続
+    const code = data?.codeResult?.code;
+    if(code) tryAccept(code);
+  }catch(e){}
+});
+
+/** buttons */
+btnStart.addEventListener("click", async ()=>{
+  if(running){
+    stop();
+    btnStart.textContent = "カメラ開始";
+    setStatus("停止しました：再開する場合はカメラ開始", "ok");
+    return;
   }
-  requestAnimationFrame(scanLoop);
-}
+  btnStart.textContent = "起動中...";
+  try{
+    await start();
+    btnStart.textContent = "停止";
+  }catch(e){
+    btnStart.textContent = "カメラ開始";
+    setStatus("カメラ起動失敗：Safariでカメラ許可がONか確認（HTTPSで開いている必要あり）", "ng");
+  }
+});
 
-/** ===== CSV出力 ===== */
-function exportCSV(){
-  const header = ["Inquiry","Serial","ScannedAt"];
-  const rows = records.map(r => [
-    r.inquiry,
-    r.serial,
-    new Date(r.at).toISOString()
-  ]);
-  const csv = [header, ...rows].map(cols => cols.map(csvEscape).join(",")).join("\n");
-  const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  const ymd = new Date().toISOString().slice(0,10).replaceAll("-","");
-  a.href = url;
-  a.download = `serial_${ymd}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+btnExport.addEventListener("click", ()=>{
+  const header=["Inquiry","Serial","ScannedAt"];
+  const rows=records.map(r=>[r.inquiry,r.serial,new Date(r.at).toISOString()]);
+  const csv=[header,...rows].map(cols=>cols.map(csvEsc).join(",")).join("\n");
+  const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  const ymd=new Date().toISOString().slice(0,10).replaceAll("-","");
+  a.href=url; a.download=`serial_${ymd}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
-}
-function csvEscape(v){
-  const s = String(v ?? "");
-  if (/[",\n]/.test(s)) return `"${s.replace(/"/g,'""')}"`;
-  return s;
-}
+  toast("CSVダウンロード", true);
+});
+function csvEsc(v){ const s=String(v??""); return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s; }
 
-/** ===== 永続化 ===== */
+btnClear.addEventListener("click", ()=>{
+  if(!confirm("保存データを全削除します。よろしいですか？")) return;
+  records=[]; saveRecords(records); refreshTable();
+  toast("全削除しました", true);
+});
+
+/** storage */
 function loadRecords(){
   try{
-    const raw = localStorage.getItem(LS_KEY);
-    const arr = raw ? JSON.parse(raw) : [];
-    return Array.isArray(arr) ? arr : [];
+    const raw=localStorage.getItem(LS_KEY);
+    const arr=raw?JSON.parse(raw):[];
+    return Array.isArray(arr)?arr:[];
   }catch(e){ return []; }
 }
 function saveRecords(arr){
   try{ localStorage.setItem(LS_KEY, JSON.stringify(arr)); }catch(e){}
 }
 
-/** ===== ボタン ===== */
-btnStart.addEventListener("click", async ()=>{
-  if (scanning) {
-    stopCamera();
-    btnStart.textContent = "カメラ開始";
-    setStatus("停止しました：再開する場合はカメラ開始", "ok");
-  } else {
-    await startCamera();
-    if (scanning) btnStart.textContent = "停止";
-  }
-});
-
-btnExport.addEventListener("click", exportCSV);
-
-btnClear.addEventListener("click", ()=>{
-  if (!confirm("保存データを全削除します。よろしいですか？")) return;
-  records = [];
-  saveRecords(records);
-  refreshTable();
-  setStatus("全削除しました", "ok");
-});
-
-/** 初期表示 */
+/** init */
 refreshTable();
+setStatus("問い合わせ番号を入力（12345-1234567）", "ng");
 </script>
 </body>
 </html>
