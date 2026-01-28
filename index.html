@@ -1,7 +1,195 @@
 <!doctype html>
 <html lang="ja">
 <head>
+<meta charset="utf-8"><!doctype html>
+<html lang="ja">
+<head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Serial Keeper</title>
+
+<style>
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial;
+  background:#fff;
+  color:#111;
+}
+header{
+  padding:14px 16px;
+  border-bottom:1px solid #e5e7eb;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+h1{
+  font-size:18px;
+  margin:0;
+}
+main{
+  padding:16px;
+  max-width:700px;
+  margin:0 auto;
+}
+label{
+  font-size:12px;
+  color:#666;
+  font-weight:700;
+}
+input{
+  width:100%;
+  padding:14px;
+  font-size:18px;
+  border-radius:12px;
+  border:1px solid #ddd;
+  margin-top:6px;
+}
+button{
+  margin-top:12px;
+  padding:12px 16px;
+  font-size:14px;
+  border-radius:12px;
+  border:1px solid #ddd;
+  background:#111;
+  color:#fff;
+  font-weight:700;
+}
+#camera{
+  margin-top:16px;
+  display:none;
+  border-radius:16px;
+  overflow:hidden;
+  border:1px solid #ddd;
+}
+video{
+  width:100%;
+  height:auto;
+}
+.note{
+  margin-top:10px;
+  font-size:12px;
+  color:#666;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>Serial Keeper</h1>
+  <div id="inquiryView">Inquiry: —</div>
+</header>
+
+<main>
+  <label>問い合わせ番号（数字5桁-数字7桁）</label>
+  <input id="inquiryInput" inputmode="numeric" placeholder="12345-1234567">
+
+  <button id="startBtn">カメラ開始</button>
+
+  <div id="camera">
+    <video id="video" autoplay playsinline muted></video>
+  </div>
+
+  <div class="note">
+    ・ラベル全体を映してOK<br>
+    ・保存されるのは「英大文字＋数字・10桁」のみ<br>
+    ・保存は自動
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.2.6/dist/quagga.min.js"></script>
+
+<script>
+const INQUIRY_RE = /^\d{5}-\d{7}$/;
+const SERIAL_RE  = /^(?=.*[A-Z])[A-Z0-9]{10}$/;
+const STORAGE_KEY = "serial_records";
+
+let inquiryNo = "";
+let lastSavedAt = 0;
+let records = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+
+const inquiryInput = document.getElementById("inquiryInput");
+const inquiryView  = document.getElementById("inquiryView");
+const startBtn     = document.getElementById("startBtn");
+const cameraBox    = document.getElementById("camera");
+
+inquiryInput.addEventListener("input", () => {
+  let digits = inquiryInput.value.replace(/[^\d]/g,"");
+  if(digits.length > 12) digits = digits.slice(0,12);
+  inquiryInput.value = digits.length > 5
+    ? digits.slice(0,5) + "-" + digits.slice(5)
+    : digits;
+
+  if(INQUIRY_RE.test(inquiryInput.value)){
+    inquiryNo = inquiryInput.value;
+    inquiryView.textContent = "Inquiry: " + inquiryNo;
+  }else{
+    inquiryNo = "";
+    inquiryView.textContent = "Inquiry: —";
+  }
+});
+
+function saveSerial(raw){
+  if(!INQUIRY_RE.test(inquiryNo)) return;
+
+  const serial = raw.toUpperCase().replace(/[^A-Z0-9]/g,"");
+  if(!SERIAL_RE.test(serial)) return;
+
+  const now = Date.now();
+  if(now - lastSavedAt < 1200) return;
+
+  records.push({
+    inquiry: inquiryNo,
+    serial: serial,
+    time: now
+  });
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+  lastSavedAt = now;
+
+  navigator.vibrate?.(30);
+}
+
+startBtn.addEventListener("click", () => {
+  if(!INQUIRY_RE.test(inquiryNo)){
+    alert("問い合わせ番号を先に入力してください");
+    return;
+  }
+
+  cameraBox.style.display = "block";
+
+  Quagga.init({
+    inputStream:{
+      name:"Live",
+      type:"LiveStream",
+      target: cameraBox,
+      constraints:{
+        facingMode:"environment"
+      }
+    },
+    decoder:{
+      readers:["code_128_reader"],
+      multiple:true
+    },
+    locate:true,
+    numOfWorkers:0
+  }, err => {
+    if(err){
+      alert("カメラ起動失敗");
+      return;
+    }
+    Quagga.start();
+  });
+});
+
+Quagga.onDetected(data => {
+  const code = data?.codeResult?.code;
+  if(code) saveSerial(code);
+});
+</script>
+
+</body>
+</html>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Serial Keeper</title>
 <style>
