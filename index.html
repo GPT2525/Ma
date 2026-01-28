@@ -1,91 +1,731 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
-<title>Serial Realtime Scanner</title>
-<style>
-  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto;background:#020617;color:#e5e7eb}
-  .gate{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#020617;z-index:9999}
-  .gate-box{background:#0f172a;border:1px solid rgba(148,163,184,.3);border-radius:18px;padding:24px;width:90%;max-width:360px;text-align:center}
-  .gate-box h1{margin:0 0 8px;font-size:22px}
-  .gate-box p{margin:0 0 14px;font-size:13px;color:#94a3b8}
-  .gate-box input{width:100%;font-size:28px;text-align:center;letter-spacing:.4em;padding:12px;border-radius:14px;border:1px solid rgba(148,163,184,.4);background:#020617;color:#e5e7eb}
-  .wrap{padding:14px}
-  video{width:100%;height:auto;border-radius:14px;background:#000}
-  .roi{position:absolute;left:10%;top:42%;width:80%;height:18%;border:2px solid #60a5fa;border-radius:12px}
-  .status{margin-top:10px;font-size:14px}
-</style>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <title>Serial Keeper</title>
+  <style>
+    :root{
+      --bg:#ffffff;
+      --card:#f7f7f8;
+      --line:#e5e5e7;
+      --text:#111111;
+      --sub:#6e6e73;
+      --accent:#007aff;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue","Noto Sans JP",sans-serif;
+      background:var(--bg);
+      color:var(--text);
+    }
+    .top{
+      position:sticky; top:0;
+      background:rgba(255,255,255,.9);
+      backdrop-filter:saturate(180%) blur(16px);
+      border-bottom:1px solid var(--line);
+      padding:14px 16px;
+      display:flex; align-items:center; justify-content:space-between;
+      gap:10px;
+      z-index:10;
+    }
+    .brand{
+      font-weight:800;
+      letter-spacing:.02em;
+      font-size:16px;
+    }
+    .meta{
+      display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    .pill{
+      border:1px solid var(--line);
+      background:#fff;
+      padding:8px 10px;
+      border-radius:999px;
+      font-size:12px;
+      color:var(--sub);
+      white-space:nowrap;
+    }
+    .pill strong{color:var(--text)}
+    .wrap{
+      max-width:920px;
+      margin:0 auto;
+      padding:16px;
+      display:grid;
+      grid-template-columns: 1.25fr .75fr;
+      gap:14px;
+    }
+    @media (max-width:900px){
+      .wrap{grid-template-columns:1fr}
+    }
+    .card{
+      border:1px solid var(--line);
+      background:var(--card);
+      border-radius:18px;
+      overflow:hidden;
+    }
+    .row{
+      padding:14px;
+      background:#fff;
+      border-bottom:1px solid var(--line);
+    }
+    .row:last-child{border-bottom:none}
+    .label{
+      font-size:12px;
+      color:var(--sub);
+      margin-bottom:6px;
+      letter-spacing:.04em;
+      font-weight:700;
+    }
+    input{
+      width:100%;
+      padding:14px 12px;
+      font-size:18px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background:#fff;
+      outline:none;
+    }
+    input:focus{
+      border-color:rgba(0,122,255,.45);
+      box-shadow:0 0 0 6px rgba(0,122,255,.14);
+    }
+
+    /* Camera stage */
+    .stage{
+      position:relative;
+      width:100%;
+      aspect-ratio: 3 / 4;
+      background:#000;
+      border-radius:18px;
+      overflow:hidden;
+      border:1px solid var(--line);
+    }
+    video{
+      position:absolute; inset:0;
+      width:100%; height:100%;
+      object-fit:cover;
+    }
+    .overlay{
+      position:absolute; inset:0;
+      pointer-events:none;
+    }
+    .roi{
+      position:absolute;
+      left:10%;
+      top:42%;
+      width:80%;
+      height:18%;
+      border:2px solid var(--accent);
+      border-radius:16px;
+      box-shadow:0 0 0 9999px rgba(0,0,0,.22);
+    }
+    .hint{
+      position:absolute;
+      left:0; right:0; bottom:10px;
+      text-align:center;
+      font-size:12px;
+      color:rgba(255,255,255,.92);
+      text-shadow:0 2px 10px rgba(0,0,0,.35);
+      padding:0 10px;
+    }
+
+    /* Minimal status */
+    .status{
+      margin-top:10px;
+      font-size:12px;
+      color:var(--sub);
+      line-height:1.5;
+    }
+
+    .big{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      font-weight:900;
+      font-size:22px;
+      letter-spacing:.06em;
+    }
+    .kpi{
+      display:flex;
+      align-items:baseline;
+      gap:8px;
+      margin-top:8px;
+    }
+    .kpi .num{
+      font-weight:900;
+      font-size:28px;
+    }
+    .kpi .txt{
+      font-size:12px;
+      color:var(--sub);
+      font-weight:700;
+    }
+
+    /* History (text only) */
+    .hist{
+      max-height:420px;
+      overflow:auto;
+      padding:14px;
+      background:var(--card);
+    }
+    .item{
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:10px 10px;
+      margin-bottom:10px;
+    }
+    .item .sub{
+      font-size:11px;
+      color:var(--sub);
+      margin-top:6px;
+    }
+
+    /* Flash on success */
+    .flash{
+      position:fixed; inset:0;
+      background:rgba(0,122,255,.18);
+      opacity:0;
+      pointer-events:none;
+      transition:opacity .12s ease;
+      z-index:999;
+    }
+    .flash.on{opacity:1}
+
+    /* PIN gate */
+    .gate{
+      position:fixed; inset:0;
+      display:flex; align-items:center; justify-content:center;
+      background:#fff;
+      z-index:10000;
+      padding:16px;
+    }
+    .gateBox{
+      width:100%; max-width:380px;
+      border:1px solid var(--line);
+      border-radius:20px;
+      background:#fff;
+      padding:22px;
+      text-align:center;
+    }
+    .gateTitle{font-weight:900; font-size:18px; margin-bottom:6px}
+    .gateSub{color:var(--sub); font-size:12px; margin-bottom:14px}
+    .gateMsg{height:18px; margin-top:10px; font-size:12px; color:#d92d20}
+    .tinyNote{font-size:11px; color:var(--sub); margin-top:10px; line-height:1.5}
+
+    button{
+      border:1px solid var(--line);
+      background:#fff;
+      border-radius:14px;
+      padding:12px 12px;
+      font-weight:900;
+      cursor:pointer;
+      color:var(--text);
+    }
+    button:active{transform:translateY(1px)}
+    .btnRow{display:flex; gap:10px; flex-wrap:wrap}
+    .btnPrimary{
+      border-color:rgba(0,122,255,.25);
+      background:rgba(0,122,255,.08);
+      color:#0b2a55;
+    }
+  </style>
 </head>
+
 <body>
-
-<!-- PIN GATE -->
-<div id="pinGate" class="gate">
-  <div class="gate-box">
-    <h1>PIN CODE</h1>
-    <p>4桁入力で自動アンロック</p>
-    <input id="pinInput" inputmode="numeric" maxlength="4" placeholder="••••">
-    <div id="pinMsg" style="height:18px;color:#fb7185;font-size:12px;margin-top:8px"></div>
+  <!-- PIN GATE -->
+  <div id="pinGate" class="gate">
+    <div class="gateBox">
+      <div class="gateTitle">PIN CODE</div>
+      <div class="gateSub">4桁入力で自動アンロック</div>
+      <input id="pinInput" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" style="text-align:center; font-size:28px; letter-spacing:.35em;">
+      <div id="pinMsg" class="gateMsg"></div>
+      <div class="tinyNote">
+        ※この画面は公開URLでも、PINがないと利用できません。<br/>
+        ※一度通ると同じ端末では再入力不要です。
+      </div>
+    </div>
   </div>
-</div>
 
-<div class="wrap">
-  <video id="video" playsinline muted></video>
-  <div class="roi"></div>
-  <div class="status" id="status">PIN解除後、カメラが起動します</div>
-</div>
+  <div class="flash" id="flash"></div>
+
+  <div class="top">
+    <div class="brand">Serial Keeper</div>
+    <div class="meta">
+      <div class="pill">Inquiry No.: <strong id="inqShow">—</strong></div>
+      <div class="pill">Saved: <strong id="savedCount">0</strong></div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <!-- Left -->
+    <div class="card">
+      <div class="row">
+        <div class="label">問い合わせ番号（数字のみ・Enterで確定）</div>
+        <input id="inqInput" placeholder="例：123456" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+        <div class="status" id="inqStatus">未設定の場合は保存しません。</div>
+      </div>
+
+      <div class="row" style="background:var(--card);">
+        <div class="stage" id="stage">
+          <video id="video" playsinline muted></video>
+          <div class="overlay">
+            <div class="roi" id="roi"></div>
+            <div class="hint">枠の中に <b>Serial No. の文字</b> を合わせてください（自動保存）</div>
+          </div>
+        </div>
+        <div class="status" id="status">OCR準備中…（初回はネット接続が必要）</div>
+      </div>
+
+      <div class="row">
+        <div class="label">検出Serial（保存時のみ一瞬表示）</div>
+        <div class="big" id="detected">—</div>
+        <div class="btnRow" style="margin-top:12px">
+          <button class="btnPrimary" id="btnCam">カメラ開始</button>
+          <button id="btnPause" disabled>一時停止</button>
+          <button id="btnExport">CSV出力</button>
+          <button id="btnReset">全リセット</button>
+        </div>
+        <div class="kpi">
+          <div class="num" id="thisCount">0</div>
+          <div class="txt">この問い合わせ番号の保存数</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right -->
+    <div class="card">
+      <div class="row">
+        <div class="label">保存済み（最新25件）</div>
+        <div class="status">Serial以外は保存しません（英大文字＋数字の10桁固定）</div>
+      </div>
+      <div class="hist" id="hist"></div>
+    </div>
+  </div>
+
+  <canvas id="cap" style="display:none"></canvas>
 
 <script>
-/* ===== PIN ===== */
+/* =========================
+   SETTINGS (Fixed)
+========================= */
 const FIXED_PIN = "8888";
-const PIN_KEY = "serial_pin_ok";
-const pinGate = document.getElementById("pinGate");
-const pinInput = document.getElementById("pinInput");
-const pinMsg = document.getElementById("pinMsg");
+const PIN_KEY   = "sk_pin_ok_v1";
 
-function unlock(){
+const STORAGE_KEY = "sk_serial_keeper_v1";
+/*
+  Serial rules (final):
+  - 10 chars
+  - A-Z and 0-9 only
+  - must contain at least 1 letter (reduces false positives like random numbers)
+*/
+const SERIAL_RE = /^(?=.*[A-Z])[A-Z0-9]{10}$/;
+
+let state = loadState();
+
+let stream=null, track=null;
+let running=false, paused=false;
+let workerReady=false;
+let worker=null;
+
+// Stability: require same serial twice in a row
+let stableCandidate="", stableCount=0;
+
+// UI
+const el = id => document.getElementById(id);
+const flash = el("flash");
+
+function nowISO(){
+  const d=new Date();
+  const p=n=>String(n).padStart(2,"0");
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
+function loadState(){
+  try{
+    const raw=localStorage.getItem(STORAGE_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  return {createdAt: nowISO(), inquiryNo:"", scans:[]};
+}
+function saveState(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function setInquiryNo(v){
+  const num = String(v||"").replace(/\D/g,"");
+  state.inquiryNo = num;
+  saveState();
+  refresh();
+}
+
+function refresh(){
+  el("inqShow").textContent = state.inquiryNo || "—";
+  el("savedCount").textContent = state.scans.length;
+  el("thisCount").textContent = state.inquiryNo ? state.scans.filter(x=>x.inquiryNo===state.inquiryNo).length : 0;
+  renderHist();
+}
+
+function renderHist(){
+  const box=el("hist");
+  const rows=[...state.scans].slice(-25).reverse();
+  if(!rows.length){
+    box.innerHTML = `<div class="status">まだデータがありません。</div>`;
+    return;
+  }
+  box.innerHTML = rows.map(r => `
+    <div class="item">
+      <div style="font-weight:900;color:#111;font-size:12px">Inquiry No. ${escapeHTML(r.inquiryNo)}</div>
+      <div class="big" style="font-size:18px;margin-top:4px">${escapeHTML(r.serial)}</div>
+      <div class="sub">${escapeHTML(r.at)}</div>
+    </div>
+  `).join("");
+}
+
+function escapeHTML(s){
+  return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+function flashOK(){
+  flash.classList.add("on");
+  setTimeout(()=>flash.classList.remove("on"), 160);
+}
+
+function serialExists(serial){
+  const sn=String(serial).toUpperCase();
+  return state.scans.some(s=>String(s.serial).toUpperCase()===sn);
+}
+
+function saveSerial(serial){
+  if(!state.inquiryNo){
+    // stop user from thinking it saved
+    el("inqStatus").textContent="問い合わせ番号が未設定です（入力→Enter）。";
+    return;
+  }
+  if(serialExists(serial)) return; // silent skip
+  state.scans.push({inquiryNo: state.inquiryNo, serial, at: nowISO()});
+  saveState();
+  flashOK();
+  // show briefly, then hide
+  el("detected").textContent = serial;
+  setTimeout(()=>{ el("detected").textContent="—"; }, 350);
+  refresh();
+}
+
+/* =========================
+   PIN (auto unlock)
+========================= */
+const pinGate = el("pinGate");
+const pinInput = el("pinInput");
+const pinMsg = el("pinMsg");
+
+function unlockPIN(){
   localStorage.setItem(PIN_KEY,"1");
   pinGate.style.display="none";
-  startCamera();
 }
 
-if(localStorage.getItem(PIN_KEY)==="1"){
-  pinGate.style.display="none";
-  setTimeout(startCamera,300);
-}
-
-pinInput.addEventListener("input",()=>{
-  const v = pinInput.value.replace(/\D/g,"").slice(0,4);
-  pinInput.value = v;
+function checkAutoPIN(){
+  const v = (pinInput.value||"").replace(/\D/g,"").slice(0,4);
+  if(pinInput.value !== v) pinInput.value = v;
   if(v.length===4){
     if(v===FIXED_PIN){
-      unlock();
+      unlockPIN();
+      // focus inquiry input for speed
+      setTimeout(()=>{ try{ el("inqInput").focus(); }catch(e){} }, 150);
     }else{
       pinMsg.textContent="PINが違います";
       pinInput.value="";
     }
   }
+}
+
+if(localStorage.getItem(PIN_KEY)==="1"){
+  pinGate.style.display="none";
+  setTimeout(()=>{ try{ el("inqInput").focus(); }catch(e){} }, 150);
+}else{
+  setTimeout(()=>{ try{ pinInput.focus(); }catch(e){} }, 200);
+}
+
+pinInput.addEventListener("input", ()=>{
+  pinMsg.textContent="";
+  checkAutoPIN();
 });
 
-/* ===== CAMERA ===== */
-const video = document.getElementById("video");
-const status = document.getElementById("status");
-let stream = null;
+/* =========================
+   Inquiry No input
+========================= */
+const inqInput = el("inqInput");
+inqInput.addEventListener("input", ()=>{
+  // digits only
+  const v = inqInput.value.replace(/\D/g,"");
+  if(inqInput.value !== v) inqInput.value = v;
+});
+inqInput.addEventListener("keydown", (e)=>{
+  if(e.key==="Enter"){
+    e.preventDefault();
+    setInquiryNo(inqInput.value);
+    inqInput.blur();
+    el("inqStatus").textContent="設定済み。あとは枠に合わせるだけで自動保存されます。";
+  }
+});
 
+/* =========================
+   Camera start (iPhone hardened)
+========================= */
 async function startCamera(){
   if(stream) return;
+  el("status").textContent="カメラ起動中…（許可をON）";
   try{
     stream = await navigator.mediaDevices.getUserMedia({
-      video:{facingMode:"environment"},
+      video:{ facingMode:"environment", width:{ideal:1280}, height:{ideal:720} },
       audio:false
     });
-    video.srcObject = stream;
-    await video.play();
-    status.textContent="カメラ起動中（Serial位置を枠に合わせてください）";
-  }catch(e){
-    status.textContent="カメラ起動失敗（SafariでHTTPSアクセスしてください）";
+    el("video").srcObject = stream;
+    await el("video").play();
+    running=true; paused=false;
+    el("btnPause").disabled=false;
+    el("btnPause").textContent="一時停止";
+    el("status").textContent = workerReady ? "読み取り中（Serial位置のみ / 自動保存）" : "OCR準備中…（ネット接続が必要）";
+    loop();
+  }catch(err){
+    el("status").textContent="カメラ起動失敗（HTTPSで開いているか / Safari許可 / アプリ内ブラウザではないか確認）";
   }
 }
+
+function stopCamera(){
+  if(stream){
+    stream.getTracks().forEach(t=>t.stop());
+    stream=null;
+  }
+  running=false;
+  el("btnPause").disabled=true;
+}
+
+function togglePause(){
+  paused = !paused;
+  el("btnPause").textContent = paused ? "再開" : "一時停止";
+  el("status").textContent = paused ? "一時停止中" : "読み取り中（Serial位置のみ / 自動保存）";
+  if(!paused) loop();
+}
+
+const btnCam = el("btnCam");
+function camFire(ev){
+  try{ ev.preventDefault(); ev.stopPropagation(); }catch(_){}
+  startCamera();
+}
+["click","pointerup","touchend","mousedown"].forEach(evt=>{
+  btnCam.addEventListener(evt, camFire, {passive:false});
+});
+el("stage").addEventListener("touchend", ()=>{ if(!stream) startCamera(); }, {passive:true});
+el("stage").addEventListener("click", ()=>{ if(!stream) startCamera(); }, {passive:true});
+
+el("btnPause").addEventListener("click", togglePause);
+
+/* =========================
+   Export / Reset
+========================= */
+el("btnExport").addEventListener("click", ()=>{
+  const header=["InquiryNo","Serial","ScannedAt"];
+  const rows=state.scans;
+  const csv=[header.join(",")].concat(
+    rows.map(r => [r.inquiryNo,r.serial,r.at].map(csvEscape).join(","))
+  ).join("\n");
+  const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;
+  const d=new Date(); const p=n=>String(n).padStart(2,"0");
+  a.download=`serial_${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+function csvEscape(v){
+  const s=String(v??"");
+  if(/[",\n]/.test(s)) return `"${s.replaceAll('"','""')}"`;
+  return s;
+}
+
+el("btnReset").addEventListener("click", ()=>{
+  if(confirm("全データを削除します。よろしいですか？")){
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(PIN_KEY);
+    location.reload();
+  }
+});
+
+/* =========================
+   OCR (Tesseract.js via CDN)
+========================= */
+async function loadTesseract(){
+  return new Promise((resolve,reject)=>{
+    const s=document.createElement("script");
+    s.src="https://unpkg.com/tesseract.js@5/dist/tesseract.min.js";
+    s.onload=()=>resolve();
+    s.onerror=()=>reject();
+    document.head.appendChild(s);
+  });
+}
+async function initWorker(){
+  try{
+    await loadTesseract();
+    const Tesseract = window.Tesseract;
+    worker = await Tesseract.createWorker("eng", 1, {
+      logger: m => {
+        // keep minimal (don’t spam UI)
+      }
+    });
+    await worker.setParameters({
+      tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+      preserve_interword_spaces: "1"
+    });
+    workerReady=true;
+    el("status").textContent="準備完了。カメラ開始 → 枠に合わせる";
+  }catch(e){
+    workerReady=false;
+    el("status").textContent="OCRの読み込みに失敗（ネット接続が必要）";
+  }
+}
+initWorker();
+
+/* =========================
+   ROI capture + loop
+========================= */
+function roiRect(){
+  const roi = el("roi").getBoundingClientRect();
+  const vid = el("video").getBoundingClientRect();
+  const rx = (roi.left - vid.left) / vid.width;
+  const ry = (roi.top - vid.top) / vid.height;
+  const rw = roi.width / vid.width;
+  const rh = roi.height / vid.height;
+  return {rx,ry,rw,rh};
+}
+
+async function captureROI(){
+  const video = el("video");
+  const canvas = el("cap");
+  const {rx,ry,rw,rh} = roiRect();
+
+  const vw = video.videoWidth || 1280;
+  const vh = video.videoHeight || 720;
+
+  // handle object-fit: cover mapping
+  const disp = video.getBoundingClientRect();
+  const arV = vw / vh;
+  const arD = disp.width / disp.height;
+
+  let sx=0, sy=0, sw=vw, sh=vh;
+  if(arV > arD){
+    // crop left/right
+    sh = vh;
+    sw = Math.round(vh * arD);
+    sx = Math.round((vw - sw)/2);
+    sy = 0;
+  }else{
+    // crop top/bottom
+    sw = vw;
+    sh = Math.round(vw / arD);
+    sx = 0;
+    sy = Math.round((vh - sh)/2);
+  }
+
+  const x = sx + Math.round(rx * sw);
+  const y = sy + Math.round(ry * sh);
+  const w = Math.round(rw * sw);
+  const h = Math.round(rh * sh);
+
+  canvas.width = Math.max(1, w);
+  canvas.height = Math.max(1, h);
+
+  const ctx = canvas.getContext("2d", {willReadFrequently:true});
+  ctx.drawImage(video, x, y, w, h, 0, 0, w, h);
+
+  // High-contrast binarize to improve OCR
+  const img = ctx.getImageData(0,0,w,h);
+  const d = img.data;
+  for(let i=0;i<d.length;i+=4){
+    const g = (d[i]*0.299 + d[i+1]*0.587 + d[i+2]*0.114);
+    const v = g > 165 ? 255 : 0;
+    d[i]=d[i+1]=d[i+2]=v;
+  }
+  ctx.putImageData(img,0,0);
+
+  return canvas;
+}
+
+function cleanupText(txt){
+  return String(txt||"")
+    .toUpperCase()
+    .replace(/SERIALNO\.?|SERIAL|IMEI2|IMEI|EID|JAN|S\/N|SN|NO\.|:/g," ")
+    .replace(/[^A-Z0-9 ]/g," ")
+    .replace(/\s+/g," ")
+    .trim();
+}
+
+function extractSerial(txt){
+  const t = cleanupText(txt);
+  const tokens = t.split(" ");
+  for(const tok of tokens){
+    if(SERIAL_RE.test(tok)) return tok;
+  }
+  return "";
+}
+
+let lastLoopAt=0;
+async function loop(){
+  if(!running || paused) return;
+  const now = performance.now();
+  // throttle ~2fps (heat control)
+  if(now - lastLoopAt < 520){
+    requestAnimationFrame(loop);
+    return;
+  }
+  lastLoopAt = now;
+
+  if(!workerReady || !worker){
+    requestAnimationFrame(loop);
+    return;
+  }
+
+  try{
+    const canvas = await captureROI();
+    const { data } = await worker.recognize(canvas);
+    const txt = data && data.text ? data.text : "";
+    const serial = extractSerial(txt);
+
+    if(serial){
+      // stabilize 2 consecutive matches
+      if(serial === stableCandidate){
+        stableCount++;
+      }else{
+        stableCandidate = serial;
+        stableCount = 1;
+      }
+
+      if(stableCount >= 2){
+        stableCandidate = "";
+        stableCount = 0;
+
+        // save silently; duplicates auto-skip
+        saveSerial(serial);
+      }
+    }else{
+      stableCandidate = "";
+      stableCount = 0;
+    }
+  }catch(e){
+    // keep loop alive
+  }
+
+  requestAnimationFrame(loop);
+}
+
+window.addEventListener("beforeunload", ()=>{
+  try{ stopCamera(); }catch(e){}
+});
+
+// initial UI
+refresh();
 </script>
 
 </body>
